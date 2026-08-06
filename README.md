@@ -113,9 +113,17 @@ As shown above, a full call stack (`H5Acreate2`-`H5A__create_api_common`-`H5A__c
 Normally, once a package finishes building, its build directory and unstripped debug info are gone. If a user hits a crash in production, there's no easy way to get back to sou
 rce-level debugging without rebuilding from scratch with debug flags. The `--debug-source` and `--debug-symbols` flags solve this by caching exactly what's needed (source tree + split symbols, keyed by the package's dag hash) so any installed build stays debuggable long after the fact.
 
+
+Normally, once a package finishes building, its build directory and unstripped debug info are gone. If a user hits a crash in production, there's no easy way to get back to source-level debugging without rebuilding from scratch with debug flags. The `--debug-source` and `--debug-symbols` flags solve this by caching exactly what's needed (source tree + split symbols, keyed by the package's dag hash) so a debug build stays debuggable long after the fact, without needing to keep the original build directory around.
+
+> Note: `--debug-symbols` splits symbols out of the installed binaries, which requires those binaries to actually carry debug info in the first place, so the package must be  nstalled with `build_type=Debug` (or an equivalent debug-info flag for non-CMake build systems). Installing without a debug build type will skip symbol splitting silently: `--debug-source` still caches the source tree, but no `symbols/` directory or build-ID index is produced.
+
 ## Notes
 
 ### Debug cache layout (out-of-prefix)
+
+Split debug symbols are stored outside the install prefix, under `~/.spack/debug-sources/<package>-<version>-<dag-hash>/symbols/`, organized by build-ID (the standard ELF mechanism debuggers use to match a binary to its separate debug file):
+
 
 ```bash
 [root@5031a4660868 ~]# ls  ~/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54
@@ -127,8 +135,12 @@ h5debug.debug  h5dump.debug    h5jam.debug	       h5perf.debug   h5repart.debug	
 [root@5031a4660868 ~]# ls  ~/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/symbols/.build-id/
 09  16	18  1d	32  44	45  4a	65  6b	77  7c	7f  81	ac  c9	cb  cc	d3  eb	f6
 ```
+Because the symbols are keyed by build-ID rather than tied to a specific file path, `gdb` can locate them automatically via `set debug-file-directory` (see below) as long as the installed binaries retain their build-ID notes. No manual `add-symbol-file` bookkeeping needed in the common case.
+
 
 ### Prefix size reporting
+
+Splitting debug symbols out of the binaries also shrinks the installed package itself. The generated `gdbinit` reports exactly how much smaller the install prefix became as a result:
 
 ```bash
 cat ~/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/gdbinit
@@ -146,3 +158,5 @@ set debug-file-directory /root/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o
 #   add-symbol-file "/root/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/symbols/h5clear.debug" <load-address>   # for /opt/software/linux-broadwell/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/bin/h5clear
 #   (get <load-address> from `info sharedlibrary` after `run`)
 ```
+
+For `hdf5`, splitting symbols out of 22 binaries reduced the install prefix by roughly 24.4 MiB, a  deployment-size benefit on top of the debuggability gain, since production installs no longer need to carry full debug sections inline in every shared library and executable.
