@@ -25,7 +25,7 @@ Particulary, the Dockerfile in this demo (attached) wires my repos:
 ## Quick start
 
 > FYI: The Dockerfile and `repro_simple.c` used to build this image are available.
-
+1;95;0c
 
 ## 1. Pull and run the container
 
@@ -112,10 +112,6 @@ k*poc_null      = 42;
 As shown above, a full call stack (`H5Acreate2`-`H5A__create_api_common`-`H5A__create_common`-`H5VL_attr_create`-`...`-`H5A__create`) and a source listing centered on the crash line is triggered, all reconstructed from the cached debug-source tree.
 
 ## Why this matters
-
-Normally, once a package finishes building, its build directory and unstripped debug info are gone. If a user hits a crash in production, there's no easy way to get back to sou
-rce-level debugging without rebuilding from scratch with debug flags. The `--debug-source` and `--debug-symbols` flags solve this by caching exactly what's needed (source tree + split symbols, keyed by the package's dag hash) so any installed build stays debuggable long after the fact.
-
 
 Normally, once a package finishes building, its build directory and unstripped debug info are gone. If a user hits a crash in production, there's no easy way to get back to source-level debugging without rebuilding from scratch with debug flags. The `--debug-source` and `--debug-symbols` flags solve this by caching exactly what's needed (source tree + split symbols, keyed by the package's dag hash) so a debug build stays debuggable long after the fact, without needing to keep the original build directory around.
 
