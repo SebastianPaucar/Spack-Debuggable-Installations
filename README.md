@@ -20,9 +20,12 @@ Particulary, the Dockerfile in this demo (attached) wires my repos:
 
 * The container ships a deliberately-crashing HDF5 variant (`hdf5-crash-demo`),  a patched copy of upstream HDF5 that null-pointer-dereferences whenever an attribute name starts with the letter `X`. It exists purely as a reproducible PoC so you can walk through the full install-crash-debug pipeline yourself, live, inside the container.
 * A pre-installed, standard `hdf5` build, unrelated to the crash demo, is also included in the container just as a baseline example.
-* `/root/demo/repro_simple.c` a small C program that creates an HDF5 file and writes an attribute named `Xcrash`, triggering the deliberate crash.
+* `/root/demo/repro_simple.c` a small C program (already baked into the image) that creates an HDF5 file and writes an attribute named `Xcrash`, triggering the deliberate crash. It's ready to compile as soon as you're inside the container.
 
 ## Quick start
+
+> FYI: The Dockerfile and `repro_simple.c` used to build this image are available.
+
 
 ## 1. Pull and run the container
 
