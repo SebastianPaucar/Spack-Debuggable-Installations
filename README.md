@@ -4,17 +4,17 @@ This container demonstrates Spack's new `--debug-source` and `--debug-symbols` i
 
 The content related to this demo is:
 
-* PR 52768 (`spack/spack`): DWARF-referenced source hook and symbol splitting plus GDB init for debuggable installations.
-* PR 19 (`spack/compiler-wrapper`): `-ffile-prefix-map=<staging>=.` and `--build-id` injection in compiler-wrapper.
-* PR 5353 (`spack/spack-packages`): set `SPACK_DEBUG_PREFIX_MAP` for `-ffile-prefix-map=<stage>=.` injection at compiler-wrapper level.
-* Issue 52580 (`spack/spack`): `.spack/` vs relative paths vs compiler-wrapper remaps.
+* [PR 52768](https://github.com/spack/spack/pull/52768) (`spack/spack`): DWARF-referenced source hook and symbol splitting plus GDB init for debuggable installations.
+* [PR 19](https://github.com/spack/compiler-wrapper/pull/19) (`spack/compiler-wrapper`): `-ffile-prefix-map=<staging>=.` and `--build-id` injection in compiler-wrapper.
+* [PR 5353](https://github.com/spack/spack-packages/pull/5353) (`spack/spack-packages`): set `SPACK_DEBUG_PREFIX_MAP` for `-ffile-prefix-map=<stage>=.` injection at compiler-wrapper level.
+* [Issue 52580](https://github.com/spack/spack/issues/52580) (`spack/spack`): `.spack/` vs relative paths vs compiler-wrapper remaps.
 
 Particulary, the Dockerfile in this demo (attached) wires my repos:
 
-* `spack/spack`: `feature/debuggable-installations-source-and-symbols` branch (forked).
-* `spack/compiler-wrapper`: `feature/debug-prefix-map` branch (forked).
-* `spack/spack-packages`: `feature/compiler-wrapper-build-id-prototype` branch (forked).
-* `repo-poc`: A custom package repo (`poc_repo`) containing `hdf5-crash-demo`, alongside the standard builtin package repo.
+* `spack/spack`: [`feature/debuggable-installations-source-and-symbols`](https://github.com/SebastianPaucar/spack/tree/feature/debuggable-installations-source-and-symbols) branch (forked)
+* `spack/compiler-wrapper`: [`feature/debug-prefix-map`](https://github.com/SebastianPaucar/compiler-wrapper/tree/feature/debug-prefix-map) branch (forked).
+* `spack/spack-packages`: [`feature/compiler-wrapper-build-id-prototype`](https://github.com/SebastianPaucar/spack-packages/tree/feature/compiler-wrapper-build-id-prototype) branch (forked).
+* [`repo-poc`](https://github.com/SebastianPaucar/poc-repo): A custom package repo (`poc_repo`) containing `hdf5-crash-demo`, alongside the standard builtin package repo.
 
 ## What is in the demo container
 
@@ -27,6 +27,7 @@ Particulary, the Dockerfile in this demo (attached) wires my repos:
 ## 1. Pull and run the container
 
 ```bash
+git clone git@github.com:SebastianPaucar/Spack-Debuggable-Installations.git
 docker pull sebastianpaucar/spack-debuggable-installations:latest
 docker run -it sebastianpaucar/spack-debuggable-installations:latest interactive-shell
 ```
@@ -51,7 +52,7 @@ $(spack location -i mpi)/bin/mpicc -g0 /root/demo/repro_simple.c \
     -Wl,-rpath,${HDF5_PREFIX}/lib -o /root/demo/repro_simple
 ```
 
-## 4. Run it (it will segfaul)
+## 4. Run it (it will segfault)
 
 ```bash
 /root/demo/repro_simple
@@ -101,11 +102,47 @@ H5A__create (loc=loc@entry=0x7ffec77f81a0, attr_name=attr_name@entry=0x400b60 "X
 248	    /* Deliberate PoC crash: trigger on any attribute name starting with "X" */
 249	    if (attr_name[0] == 'X') {
 250	        int *poc_null = NULL;
-251	        *poc_null      = 42;
+251
+k*poc_null      = 42;
 ```
 
 As shown above, a full call stack (`H5Acreate2`-`H5A__create_api_common`-`H5A__create_common`-`H5VL_attr_create`-`...`-`H5A__create`) and a source listing centered on the crash line is triggered, all reconstructed from the cached debug-source tree.
 
 ## Why this matters
 
-Normally, once a package finishes building, its build directory and unstripped debug info are gone. If a user hits a crash in production, there's no easy way to get back to source-level debugging without rebuilding from scratch with debug flags. The `--debug-source` and `--debug-symbols` flags solve this by caching exactly what's needed (source tree + split symbols, keyed by the package's dag hash) so any installed build stays debuggable long after the fact.
+Normally, once a package finishes building, its build directory and unstripped debug info are gone. If a user hits a crash in production, there's no easy way to get back to sou
+rce-level debugging without rebuilding from scratch with debug flags. The `--debug-source` and `--debug-symbols` flags solve this by caching exactly what's needed (source tree + split symbols, keyed by the package's dag hash) so any installed build stays debuggable long after the fact.
+
+## Notes
+
+### Debug cache layout (out-of-prefix)
+
+```bash
+[root@5031a4660868 ~]# ls  ~/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54
+HDF5Examples  c++  compile_commands.json  fortran  gdbinit  hl	java  m4  src  symbols	test  testpar  tools  utils
+[root@5031a4660868 ~]# ls  ~/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/symbols/
+h5clear.debug  h5delete.debug  h5format_convert.debug  h5ls.debug     h5perf_serial.debug  h5stat.debug			   libhdf5_tools_debug.so.310.0.6.debug  ph5diff.debug
+h5copy.debug   h5diff.debug    h5import.debug	       h5mkgrp.debug  h5repack.debug	   h5unjam.debug		   mirror_server.debug
+h5debug.debug  h5dump.debug    h5jam.debug	       h5perf.debug   h5repart.debug	   libhdf5_debug.so.310.5.1.debug  mirror_server_stop.debug
+[root@5031a4660868 ~]# ls  ~/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/symbols/.build-id/
+09  16	18  1d	32  44	45  4a	65  6b	77  7c	7f  81	ac  c9	cb  cc	d3  eb	f6
+```
+
+### Prefix size reporting
+
+```bash
+cat ~/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/gdbinit
+# Generated by 'spack debug' for hdf5@1.14.6
+# dag_hash: mtl4u2gq3pbkw77o6baggzmgxrftaz54
+set substitute-path ./build /root/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54
+set debug-file-directory /root/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/symbols
+#
+# Debug symbols were split for 22 binaries into:
+#   /root/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/symbols/
+# Prefix size reduced by ~24.4 MiB
+# The debug-file-directory line above auto-loads split symbols via
+# build-id lookup, if your toolchain emits build-id notes at link time.
+# If it doesn't, or auto-discovery still doesn't trigger, load manually:
+#   add-symbol-file "/root/.spack/debug-sources/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/symbols/h5clear.debug" <load-address>   # for /opt/software/linux-broadwell/hdf5-1.14.6-mtl4u2gq3pbkw77o6baggzmgxrftaz54/bin/h5clear
+#   (get <load-address> from `info sharedlibrary` after `run`)
+```
