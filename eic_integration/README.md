@@ -40,22 +40,6 @@ This framework closes that gap:
 * Stores it in the same OCI registries used by the build cache, tagged by build ID.
 * Resolves GDB build-ID lookups against OCI data over HTTPS via a lightweight debuginfod-compatible adapter.
 
-## Where each piece lives
-
-| Piece | Repo | File | Role |
-|---|---|---|---|
-| Debug capture | `spack/spack` (fork) | `debug_source.py` | Install-time DWARF/symbol capture into `~/.spack/debug-sources/` |
-| Build-ID injection | `spack/compiler-wrapper` (fork) | `cc.sh` | `-ffile-prefix-map` + `--build-id` at compile/link time |
-| Debug-info package resolution | `spack/spack-packages` (fork) | `compiler_wrapper/package.py` | Pins `compiler-wrapper@1.1.0-build-id` as an installable version |
-| elfutils patch | `spack/spack-packages` (fork) | `elfutils/package.py` | Patches `debuginfod_find_source` to accept `./`-relative filenames |
-| Auto-push | `spack/spack` (fork) | `hooks/autopush.py` | Pushes both regular buildcache *and* debug artifacts, automatically, post-install |
-| On-demand fetch/repair | `spack/spack` (fork) | `cmd/debug.py` | `spack debug {stage-source,split-symbols,fetch,serve}` |
-| Environment wiring | `eic/containers` | `spack-environment/{dbg,xl}/{,epic/}spack.yaml` | Pins `compiler-wrapper@1.1.0-build-id`, sets `build_type` per package |
-| Version pinning | `eic/containers` | `spack.sh`, `spack-packages.sh` | Cherry-picks pointing at the debuggable-installations + debuginfod commits |
-| Build orchestration | `eic/containers` | `scripts/build-eic.sh` | Computes `SPACK_BUILDER_INSTALL_FLAGS` (adds `--debug-source --debug-symbols` for `dbg`/`xl`) |
-| Docker build | `eic/containers` | `containers/eic/Dockerfile` | Consumes `SPACK_BUILDER_INSTALL_FLAGS` in builder stages only; `SPACK_INSTALL_FLAGS` (unmodified) in runtime stages |
-| Registry | GHCR / eicweb | — | Stores both regular package tags (`<pkg>-<ver>-<hash>.spack`) and debug tags (`debuginfo-<build-id>`) side by side |
-
 ## Cherry-picks
 
 Enabled via `spack.sh` and `spack-packages.sh`:
@@ -71,14 +55,9 @@ Enabled via `spack.sh` and `spack-packages.sh`:
 ## 5945d81a8359eed559ec60b1be9151de57473f51: elfutils: patch debuginfod_find_source to accept ./-relative filenames (spack-packages#6259)
 ```
 
-Refer to `spack.sh`/`spack-packages.sh` for the current, authoritative list —
-these are illustrative of the specific commits this framework depends on.
-
 ## Environment wiring
 
-`compiler-wrapper@1.1.0-build-id` and `RelWithDebInfo`/debug-flag overrides
-are set per-package in `spack-environment/xl/spack.yaml` (and mirrored in
-`dbg/spack.yaml`):
+`compiler-wrapper@1.1.0-build-id` and `RelWithDebInfo` overrides for ROOT/Geant4 and dependents in `xl/spack.yaml` and `xl/epic/spack.yaml`, with `elfutils@0.194+debuginfod` GDB support:
 
 ```yaml
 packages:
@@ -107,37 +86,6 @@ specs:
 - gdb ^elfutils@0.194+debuginfod
 - ...
 ```
-
-The `epic/` sub-environment (`spack-environment/xl/epic/spack.yaml`) repeats
-the same `compiler-wrapper`/`build_type=RelWithDebInfo` overrides for
-`algorithms`, `edm4eic`, `epic`, matching the parent environment.
-
-`scripts/build-eic.sh` gates the actual capture flags to `dbg` and `xl`:
-
-```bash
-SPACK_INSTALL_FLAGS="--no-check-signature --show-log-on-error --yes-to-all"
-SPACK_BUILDER_INSTALL_FLAGS="${SPACK_INSTALL_FLAGS}"
-if [ "${ENV}" = "dbg" ] || [ "${ENV}" = "xl" ]; then
-  SPACK_BUILDER_INSTALL_FLAGS="${SPACK_BUILDER_INSTALL_FLAGS} --debug-source --debug-symbols"
-fi
-```
-
-`containers/eic/Dockerfile` consumes the two flag sets separately:
-
-```dockerfile
-ARG SPACK_INSTALL_FLAGS="--no-check-signature --show-log-on-error --yes-to-all"
-ARG SPACK_BUILDER_INSTALL_FLAGS="${SPACK_INSTALL_FLAGS}"
-```
-
-```dockerfile
-spack ${SPACK_FLAGS} install ${SPACK_BUILDER_INSTALL_FLAGS}
-```
-
-Only the **builder** stages (which compile from source) receive
-`--debug-source --debug-symbols`. Runtime stages install with
-`--use-buildcache only` via the unmodified `SPACK_INSTALL_FLAGS`, so they
-never attempt to capture debug artifacts — there's nothing to capture from a
-prebuilt binary pull.
 
 ## Full pipeline
 
