@@ -97,27 +97,44 @@ flowchart TB
 
     Build -->|--build-arg| Docker
 
+    subgraph Env["spack.yaml (dbg/xl)"]
+        E1["compiler-wrapper:<br/>require '@1.1.0-build-id'<br/>(cherry-pick spack-packages#6214)"]
+    end
+
+    subgraph Wrapper["spack/compiler-wrapper (fork), cc.sh"]
+        W1["intercepts every compile/link call"]
+        W2["injects -ffile-prefix-map<br/>(machine-agnostic DWARF paths)"]
+        W3["injects --build-id / -Wl,--build-id"]
+        W1 --> W2
+        W1 --> W3
+    end
+
+    E1 -.->|pins version used by| Wrapper
+
     subgraph Docker["containers/eic/Dockerfile — builder track"]
         D1["spack install $SPACK_BUILDER_INSTALL_FLAGS<br/>(compiles for real, dbg/xl-scoped)"]
-        D2["new_installer.py phase.execute()<br/>(cherry-pick spack/spack#52949)"]
+        D2["new_installer.py phase.execute()<br/>(cherry-pick spack/spack#52949)<br/>routed through cc.sh"]
         D3["install_debug_artifacts()<br/>split_debug_symbols()<br/>write_gdbinit()<br/>(cherry-pick spack/spack#52949)"]
-        D1 --> D2 --> D3
+	D1 --> D2
+        D2 -->|"reads DWARF this compile just<br/>produced via cc.sh (machine-agnostic<br/>paths + build-id already embedded)"| D3
     end
+
+    Wrapper -.->|"cc.sh invoked for<br/>every compile unit in D2"| D2
 
     D3 -->|writes to| Cache["~/.spack/debug-sources/&lt;pkg&gt;-&lt;ver&gt;-&lt;hash&gt;/<br/>captured source tree, symbols/.build-id/, gdbinit"]
 
     Cache -->|install completes| Hook["hooks/autopush.py :: post_install()<br/>(cherry-pick spack/spack#52949)"]
 
     subgraph Hook_detail["for each autopush:true mirror (eicweb, ghcr)"]
-        H1["1. uploader.push_or_raise([spec])<br/>tag: pkg-ver-hash.spack (always)"]
-        H2["2. push_debug_artifacts([spec])<br/>tag: debuginfo-build-id (cherry-pick spack/spack#52949)"]
+        H1["1. uploader.push_or_raise()<br/>tag: pkg-ver-hash.spack (always)"]
+        H2["2. push_debug_artifacts()<br/>tag: debuginfo-build-id (cherry-pick spack/spack#52949)"]
     end
 
     Hook --> Hook_detail
     Hook_detail -->|OCI push| Registry[("GHCR / eicweb<br/>OCI registry")]
 
     Registry --> R1["pkg-ver-hash.spack<br/>(regular buildcache)"]
-    Registry --> R2["debuginfo-build-id<br/>layers: .debug + source.tar.gz"]
+    Registry --> R2["debuginfo-build-id<br/>layers: .debug + source.tar.gz (new)"]
 
     R1 -->|"--use-buildcache only<br/>(unchanged behavior)"| Runtime["Runtime image stages<br/>(all environments)"]
 
@@ -128,6 +145,12 @@ flowchart TB
         A2["resolves /buildid/&lt;id&gt;/{debuginfo,source}<br/>against OCI manifest"]
         A1 --> A2
     end
+    
+    subgraph Elfutils["elfutils (fork), libdebuginfod client"]
+        EL1["patched: accepts ./-relative<br/>DWARF filenames<br/>(spack-packages#6259)"]
+    end
+
+    Elfutils -.->|"required on the gdb host<br/>to even send the source request"| GDB
 
     Adapter -->|"HTTPS: symbols + source"| GDB["gdb, DEBUGINFOD_URLS=http://127.0.0.1:8002<br/>no rebuild needed"]
 ```
