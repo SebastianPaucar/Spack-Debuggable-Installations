@@ -92,25 +92,25 @@ specs:
 ```mermaid
 flowchart TB
     subgraph Build["scripts/build-eic.sh (ENV=dbg or xl)"]
-        F1["SPACK_BUILDER_INSTALL_FLAGS =<br/>base flags + --debug-source --debug-symbols"]
+        F1["SPACK_BUILDER_INSTALL_FLAGS =<br/>SPACK_INSTALL_FLAGS + --debug-source --debug-symbols"]
     end
 
     Build -->|--build-arg| Docker
 
     subgraph Docker["containers/eic/Dockerfile — builder track"]
         D1["spack install $SPACK_BUILDER_INSTALL_FLAGS<br/>(compiles for real, dbg/xl-scoped)"]
-        D2["new_installer.py phase.execute()"]
-        D3["install_debug_artifacts()<br/>split_debug_symbols()<br/>write_gdbinit()"]
+        D2["new_installer.py phase.execute()<br/>(cherry-pick spack/spack#52949)"]
+        D3["install_debug_artifacts()<br/>split_debug_symbols()<br/>write_gdbinit()<br/>(cherry-pick spack/spack#52949)"]
         D1 --> D2 --> D3
     end
 
     D3 -->|writes to| Cache["~/.spack/debug-sources/&lt;pkg&gt;-&lt;ver&gt;-&lt;hash&gt;/<br/>captured source tree, symbols/.build-id/, gdbinit"]
 
-    Cache -->|install completes| Hook["hooks/autopush.py :: post_install()"]
+    Cache -->|install completes| Hook["hooks/autopush.py :: post_install()<br/>(cherry-pick spack/spack#52949)"]
 
     subgraph Hook_detail["for each autopush:true mirror (eicweb, ghcr)"]
         H1["1. uploader.push_or_raise([spec])<br/>tag: pkg-ver-hash.spack (always)"]
-        H2["2. if debug_source_dir(spec) exists:<br/>push_debug_artifacts(...)<br/>tag: debuginfo-build-id (dbg/xl only)"]
+        H2["2. push_debug_artifacts([spec])<br/>tag: debuginfo-build-id (cherry-pick spack/spack#52949)"]
     end
 
     Hook --> Hook_detail
