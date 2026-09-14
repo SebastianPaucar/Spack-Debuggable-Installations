@@ -14,7 +14,7 @@ Linux distributions address this with `debuginfod`, which serves debug symbols a
 
 ```mermaid
 flowchart LR
-    subgraph "Debian / Ubuntu / Fedora"
+    subgraph Debian["Debian / Ubuntu / Fedora"]
         direction TB
         A1[Package archive<br/>filesystem]
         A2[debuginfod<br/>scans it directly]
@@ -22,13 +22,15 @@ flowchart LR
         A1 --> A2 --> A3
     end
 
-    subgraph "Spack, before this framework"
+    subgraph Spack["Spack, before this framework"]
         direction TB
         B1[Binaries in OCI registry<br/>GHCR / eicweb]
         B2[debuginfod: can't scan<br/>a registry]
         B3[gdb: no source, no symbols]
         B1 --> B2 --> B3
     end
+
+    Debian ~~~ Spack
 ```
 
 This framework closes that gap:
