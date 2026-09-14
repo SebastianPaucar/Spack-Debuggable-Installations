@@ -103,7 +103,7 @@ flowchart TB
 
     subgraph Wrapper["spack/compiler-wrapper#19, cc.sh"]
         W1["intercepts every compile/link call"]
-        W2["injects -ffile-prefix-map<br/>(machine-agnostic DWARF paths)"]
+        W2["injects -ffile-prefix-map"]
         W3["injects --build-id / -Wl,--build-id"]
         W1 --> W2
         W1 --> W3
@@ -116,7 +116,7 @@ flowchart TB
         D2["new_installer.py phase.execute()<br/>(cherry-pick spack/spack#52949)<br/>routed through cc.sh"]
         D3["install_debug_artifacts()<br/>split_debug_symbols()<br/>write_gdbinit()<br/>(cherry-pick spack/spack#52949)"]
 	D1 --> D2
-        D2 -->|"reads DWARF this compile just<br/>produced via cc.sh (machine-agnostic<br/>paths + build-id already embedded)"| D3
+        D2 -->|"machine-agnostic DWARF paths + build-id already embedded)"| D3
     end
 
     Wrapper -.->|"cc.sh invoked for<br/>every compile unit"| D2
