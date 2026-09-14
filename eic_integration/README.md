@@ -157,33 +157,15 @@ flowchart TB
 
 ## Why this is safe for shared infrastructure
 
-- **Zero cost to environments that don't opt in.** `--debug-source
-  --debug-symbols` only appear in `SPACK_BUILDER_INSTALL_FLAGS` for
-  `dbg`/`xl`; `push_debug_artifacts` only fires when `debug_source_dir(spec)`
-  actually exists. `ci`, `prod`, and other environments run through the same
-  Dockerfile and the same `autopush.py` hook, completely unaffected.
-- **Reuses infrastructure already trusted**, rather than inventing new
-  infrastructure: same OCI registries (`eicweb`, `ghcr`), same `autopush`
-  mechanism, same credentials already flowing through `mirrors.yaml.in`. No
-  new service, no new registry, no new access model.
-- **Build-ID-based OCI keying** (not dag_hash) means debug artifacts are
-  portable in the sense that matters: the same compiled binary, wherever
-  it's consumed from buildcache, resolves to the same debug data regardless
-  of the consuming machine's local dag_hash concretization.
+* **Opt-in only.** `--debug-source` and `--debug-symbols` are enabled only for `dbg`/`xl`; `push_debug_artifacts` runs only when `debug_source_dir(spec)` exists. `ci`, `prod`, and other environments are unaffected.
+* **Reuses existing infrastructure.** Uses the existing OCI registries (`eicweb`, `ghcr`), `autopush` hook, and credentials from `mirrors.yaml.in`. No new services, registries, or access models.
+* **Build-ID-based keying.** Debug artifacts are keyed by build ID, so the same binary always resolves to the same debug data, regardless of concretization.
+
 
 ## Current scope and open questions
 
-This is a working backbone, deliberately scoped short of a fully-operational,
-always-on shared service:
-
-- `spack debug serve` runs as a local/on-demand daemon (`--start-daemon`,
-  `--stop-daemon`, `--status`), not a persistent hosted service.
-- The `executable` debuginfod endpoint (fetching a bare binary by build-ID
-  alone, with no local copy) is intentionally not implemented — not needed
-  for the normal debugging workflow, where the binary is already installed.
-- Whether EIC stands up a shared, persistent debuginfod-compatible service
-  (vs. everyone running `spack debug serve` locally against the shared OCI
-  registries) is an open infrastructure decision, not yet made.
+* `spack debug serve` is local/on-demand (`--start-daemon`, `--stop-daemon`, `--status`), not a persistent service.
+* A shared persistent debuginfod service vs. local `spack debug serve` instances using shared OCI registries remains an open infrastructure decision.
 
 ## Related Documentation
 
