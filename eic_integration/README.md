@@ -98,10 +98,10 @@ flowchart TB
     Build -->|--build-arg| Docker
 
     subgraph Env["spack.yaml (dbg/xl)"]
-        E1["compiler-wrapper:<br/>require '@1.1.0-build-id'<br/>(cherry-pick spack-packages#6214)"]
+        E1["compiler-wrapper:<br/>require '@1.1.0-build-id'<br/>(cherry-pick spack/spack-packages#6214)"]
     end
 
-    subgraph Wrapper["spack/compiler-wrapper (fork), cc.sh"]
+    subgraph Wrapper["spack/compiler-wrapper#19, cc.sh"]
         W1["intercepts every compile/link call"]
         W2["injects -ffile-prefix-map<br/>(machine-agnostic DWARF paths)"]
         W3["injects --build-id / -Wl,--build-id"]
@@ -119,7 +119,7 @@ flowchart TB
         D2 -->|"reads DWARF this compile just<br/>produced via cc.sh (machine-agnostic<br/>paths + build-id already embedded)"| D3
     end
 
-    Wrapper -.->|"cc.sh invoked for<br/>every compile unit in D2"| D2
+    Wrapper -.->|"cc.sh invoked for<br/>every compile unit"| D2
 
     D3 -->|writes to| Cache["~/.spack/debug-sources/&lt;pkg&gt;-&lt;ver&gt;-&lt;hash&gt;/<br/>captured source tree, symbols/.build-id/, gdbinit"]
 
@@ -146,8 +146,8 @@ flowchart TB
         A1 --> A2
     end
     
-    subgraph Elfutils["elfutils (fork), libdebuginfod client"]
-        EL1["patched: accepts ./-relative<br/>DWARF filenames<br/>(spack-packages#6259)"]
+    subgraph Elfutils["elfutils, libdebuginfod client"]
+        EL1["patched: accepts ./-relative<br/>DWARF filenames<br/>(cherry-pick  spack/spack-packages#6259)"]
     end
 
     Elfutils -.->|"required on the gdb host<br/>to even send the source request"| GDB
