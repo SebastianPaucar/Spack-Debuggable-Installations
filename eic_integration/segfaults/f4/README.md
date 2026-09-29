@@ -1,3 +1,7 @@
+## f-4 segfault (`exit139:frame:ad85d4573b8f`): root cause findings via debuggable-installations for Spack packages workflow
+
+The first step is to create the host-backed working directory, start the container (long-lived, bind-mounted, and restart-safe), and fix `xz`:
+
 ```bash
 [root@lab-X opt]# mkdir -p /data/.eic-sf/repro-f4/scratch
 [root@lab-X opt]# docker run -dit --name repro-f4-v3 \
@@ -15,6 +19,8 @@ Successfully copied 88.6kB to repro-f4-v3:/usr/local/bin/xz
 [root@lab-X opt]# docker exec -it repro-f4-v3 bash
 ```
 
+Env sourcing is automatic. Next, verify that the fundamental binaries resolve correctly:
+
 ```bash
 > which eic-info
 /opt/local/bin/eic-info
@@ -24,6 +30,11 @@ Successfully copied 88.6kB to repro-f4-v3:/usr/local/bin/xz
 /opt/local/bin/xz
 > echo $PATH
 /opt/software/linux-x86_64_v2/epic-26.04.0-t6ow5muotkh2xudou7xbld4e54a2ic2x/bin:/opt/software/linux-x86_64_v2/epic-26.04.1-qc5fqu7iedenlgfmmpzwrkxwjahbdhgu/bin:/opt/software/linux-x86_64_v2/epic-26.05.0-7byhfqrmjrkotchsq57agxfyv553ol7q/bin:/opt/software/linux-x86_64_v2/epic-26.06.0-ahzpiscawpvpjpayzzuoghv5eduocqhx/bin:/opt/software/linux-x86_64_v2/epic-26.07.0-zvk22qfw56lau3mrhu7yyyb2se7eq6oh/bin:/opt/software/linux-x86_64_v2/epic-26.07.1-uzwreubimqduvctpoysj5wmbj6ay5emu/bin:/opt/software/linux-x86_64_v2/epic-main-jfqsof62aqda245apvhfktrkwc2scg35/bin:/opt/local/bin:/opt/local/scripts:/opt/spack/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+```
+
+Clone the payload repo and write the manifest (inside the container, in `/repro`):
+
+```bash
 > cd /repro
 > git clone https://github.com/BNLNPPS/swf-epicprod
 > cat > environment-manifest.sh <<'EOF'
@@ -38,6 +49,8 @@ export PBEAM=100
 EOF
 ```
 
+Launch the verified reproducer row (`39007`), with `TMPDIR` pinned into the bind mount so the intermediate file survives:
+
 ```bash
 > export TMPDIR=/repro/scratch
 > mkdir -p "$TMPDIR"
@@ -51,6 +64,8 @@ EOF
 > echo "launched, pid $!"
 launched, pid 960
 ```
+
+Now set up `/spack/spack-debug`, step by step. Confirm current state of stock spack (baseline):
 
 ```bash
 > /opt/spack/bin/spack env status
@@ -87,6 +102,8 @@ eicrecon@1.39.2
 ==> 2 installed packages
 ==> 0 concretized packages to be installed (show with `spack find -c`)
 ```
+
+`xl/epic` environment with `eicrecon@1.39.2` and `acts@45.3.0` (`build_type=Release`, the production build) is correctly configured. This is the reference. Now, clone into a separate path without touching `/opt/spack` and copy only the config files (mirrors, repos, upstreams) from stock spack: 
 
 ```bash
 > git clone -b feature/debuggable-installations https://github.com/SebastianPaucar/spack /opt/spack-debug
@@ -125,6 +142,8 @@ mirrors:
     binary: false
     url: https://mirror.spack.io
 ```
+
+Now, apply `compiler-wrapper@1.1.0-build-id` carefully in `/opt/spack-packages/repos/spack_repo/builtin/packages/`:
 
 ```bash
 > cp -r /opt/spack-packages/repos/spack_repo/builtin/packages/compiler_wrapper /tmp/backup-compiler-wrapper-orig
@@ -211,6 +230,8 @@ mirrors:
          env.set("SPACK_DISABLE_NEW_DTAGS", self.disable_new_dtags)
 ```
 
+Verify it looks right:
+
 ```bash
 > cp /tmp/compiler_wrapper.package.py.patched /opt/spack-packages/repos/spack_repo/builtin/packages/compiler_wrapper/package.py
 cp: overwrite '/opt/spack-packages/repos/spack_repo/builtin/packages/compiler_wrapper/package.py'? y
@@ -227,6 +248,8 @@ Deprecated versions:
     None
 ```
 
+Now, copy the whole `xl` environment tree config to build a debug env from the same config in `/opt/spack-environment-debug/`:
+
 ```bash
 > cp /opt/spack-environment/concretizer.yaml /opt/spack-environment-debug/
 > cp /opt/spack-environment/config.yaml /opt/spack-environment-debug/
@@ -239,6 +262,8 @@ Deprecated versions:
 > cp /opt/spack-environment/xl/epic/spack.lock /opt/spack-environment-debug/xl/epic/
 ```
 
+Activate the debug environment pointed at that exact copied config:
+
 ```bash
 > . /opt/spack-debug/share/spack/setup-env.sh
 > spack env activate -d /opt/spack-environment-debug/xl/epic
@@ -250,7 +275,10 @@ Deprecated versions:
 1.2.2 (9b558fc99dedfc17b00959c3644cfc19b06da8a9)
 ```
 
+Confirm the environment reproduces cleanly against the locked/pinned versions before touching `build_type`. Then, attach `build_type=RelWithDebInfo ^compiler-wrapper@1.1.0-build-id` for the two debug targets:
+
 ```bash
+> spack concretize --force
 > emacs  /opt/spack-environment-debug/xl/spack.yaml
 > emacs /opt/spack-environment-debug/xl/epic/spack.yaml
 > grep -n "acts\|eicrecon" /opt/spack-environment-debug/xl/spack.yaml
@@ -261,6 +289,8 @@ Deprecated versions:
 20:  - eicrecon build_type=RelWithDebInfo ^compiler-wrapper@1.1.0-build-id
 ```
 
+Create the missing file for CMake:
+
 ```bash
 > cat > /opt/local/etc/cmake/find_package_resolve_symlinks.cmake <<'EOF'
 # Stub toolchain file — created to satisfy CMAKE_TOOLCHAIN_FILE lookup
@@ -268,6 +298,8 @@ Deprecated versions:
 set(CMAKE_FIND_PACKAGE_RESOLVE_SYMLINKS ON)
 EOF
 ```
+
+Launch the installation:
 
 ```bash
 > nohup spack install --add --debug-source --debug-symbols \
@@ -314,6 +346,8 @@ FetchIndexError: Could not fetch manifest from https://ghcr.io/v2/eic/spack-v202
 ==> Updating view at /opt/local
 ```
 
+Verify that the out-of-prefix debug cache exists:
+
 ```bash
 > cd /root/.spack/debug-sources/
 > ls
@@ -325,6 +359,8 @@ acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7:
 eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd:
 ./  ../  compile_commands.json  gdbinit  src/  symbols/
 ```
+
+Merge the two GDB files into a dedicated `/repro/combined-gdbinit` file:
 
 ```bash
 > emacs /repro/combined-gdbinit
@@ -440,6 +476,8 @@ set substitute-path . /root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjg
 set debug-file-directory /root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/symbols:/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/symbols
 ```
 
+Ready to debug f-4. Locate the `eicrecon` binary, confirm the original input file is saved, and retrieve the detector compact file path:
+
 ```bash
 > find /root/spack/linux-x86_64_v2/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd -maxdepth 2 -iname "eicrecon"
 /root/spack/linux-x86_64_v2/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/lib/EICrecon
@@ -451,6 +489,8 @@ set debug-file-directory /root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuiz
 /opt/software/linux-x86_64_v2/epic-26.07.1-uzwreubimqduvctpoysj5wmbj6ay5emu/share/epic/epic_craterlake_10x100.xml
 ```
 
+Set up required shell variables:
+
 ```bash
 > source /opt/software/linux-x86_64_v2/epic-26.07.1-uzwreubimqduvctpoysj5wmbj6ay5emu/bin/thisepic.sh
 > source /repro/environment-manifest.sh
@@ -461,6 +501,8 @@ DETECTOR_COMPACT=/opt/software/linux-x86_64_v2/epic-26.07.1-uzwreubimqduvctpoysj
 > ls -la "$DETECTOR_COMPACT"
 -rw-r--r--. 1 root root 6.7K Dec 31  1969 /opt/software/linux-x86_64_v2/epic-26.07.1-uzwreubimqduvctpoysj5wmbj6ay5emu/share/epic/epic_craterlake_10x100.xml
 ```
+
+Run reconstruction under GDB using `/repro/combined-gdbinit`:
 
 ```bash
 > gdb -nx \
