@@ -462,3 +462,15 @@ DETECTOR_COMPACT=/opt/software/linux-x86_64_v2/epic-26.07.1-uzwreubimqduvctpoysj
 -rw-r--r--. 1 root root 6.7K Dec 31  1969 /opt/software/linux-x86_64_v2/epic-26.07.1-uzwreubimqduvctpoysj5wmbj6ay5emu/share/epic/epic_craterlake_10x100.xml
 ```
 
+```bash
+> gdb -nx \
+  -x /repro/combined-gdbinit \
+  -ex run \
+  --args \
+  /root/spack/linux-x86_64_v2/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/bin/eicrecon \
+  -Pdd4hep:xml_files="$DETECTOR_COMPACT" \
+  -Ppodio:output_file="/repro/debug-out2.eicrecon.edm4eic.root" \
+  -Pjana:warmup_timeout=0 \
+  -Pjana:timeout=0 \
+  "/repro/scratch/960/FULL/26.07.1/epic_craterlake/DIS/pythia8.316-1.0/NC/noRad/ep/10x100/q2_1000toINF/pythia8.316-1.0_NC_noRad_ep_10x100_q2_1000toINF_run000.0115.edm4hep.root"
+```
