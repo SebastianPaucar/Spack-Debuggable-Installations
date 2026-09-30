@@ -1,3 +1,7 @@
+# f-4 GDB reproduction
+
+Launch command used throughout (crashes deterministically at event 47):
+
 ```bash
 > gdb -nx \
   -x /repro/combined-gdbinit \
@@ -558,3 +562,274 @@ Thread 2 "eicrecon" received signal SIGSEGV, Segmentation fault.
     at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/VectorMultiTrajectory.hpp:236
 236	        return instance.m_index[istate].ipredicted != kInvalid;
 ```
+
+Verify that GDB is aware of the DWARF remaps recorded in `/repro/combined-gdbinit`:
+
+```bash
+(gdb) show substitute-path
+List of all source path substitution rules:
+  `./build/src/algorithms/calorimetry' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/calorimetry'.
+  `./build/src/algorithms/digi' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/digi'.
+  `./build/src/algorithms/fardetectors' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/fardetectors'.
+  `./build/src/algorithms/onnx' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/onnx'.
+  `./build/src/algorithms/particle_flow' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/particle_flow'.
+  `./build/src/algorithms/pid' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/pid'.
+  `./build/src/algorithms/pid_lut' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/pid_lut'.
+  `./build/src/algorithms/reco' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/reco'.
+  `./build/src/algorithms/tracking' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/algorithms/tracking'.
+  `./build/src/benchmarks/reconstruction/femc_studies' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/benchmarks/reconstruction/femc_studies'.
+  `./build/src/benchmarks/reconstruction/lfhcal_studies' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/benchmarks/reconstruction/lfhcal_studies'.
+  `./build/src/benchmarks/reconstruction/tracking_efficiency' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/benchmarks/reconstruction/tracking_efficiency'.
+  `./build/src/benchmarks/reconstruction/tracking_occupancy' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/benchmarks/reconstruction/tracking_occupancy'.
+  `./build/src/detectors/B0ECAL' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/B0ECAL'.
+  `./build/src/detectors/B0TRK' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/B0TRK'.
+  `./build/src/detectors/BEMC' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/BEMC'.
+  `./build/src/detectors/BHCAL' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/BHCAL'.
+  `./build/src/detectors/BTOF' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/BTOF'.
+  `./build/src/detectors/BTRK' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/BTRK'.
+  `./build/src/detectors/BVTX' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/BVTX'.
+  `./build/src/detectors/DIRC' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/DIRC'.
+  `./build/src/detectors/DRICH' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/DRICH'.
+  `./build/src/detectors/ECTOF' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/ECTOF'.
+  `./build/src/detectors/ECTRK' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/ECTRK'.
+  `./build/src/detectors/EEMC' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/EEMC'.
+  `./build/src/detectors/EHCAL' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/EHCAL'.
+  `./build/src/detectors/FEMC' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/FEMC'.
+  `./build/src/detectors/FHCAL' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/FHCAL'.
+  `./build/src/detectors/FOFFMTRK' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/FOFFMTRK'.
+  `./build/src/detectors/LOWQ2' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/LOWQ2'.
+  `./build/src/detectors/LUMISPECCAL' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/LUMISPECCAL'.
+  `./build/src/detectors/MPGD' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/MPGD'.
+  `./build/src/detectors/PFRICH' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/PFRICH'.
+  `./build/src/detectors/RPOTS' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/RPOTS'.
+  `./build/src/detectors/ZDC' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/detectors/ZDC'.
+  `./build/src/global/beam' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/global/beam'.
+  `./build/src/global/particle_flow' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/global/particle_flow'.
+  `./build/src/global/pid' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/global/pid'.
+  `./build/src/global/pid_lut' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/global/pid_lut'.
+  `./build/src/global/reco' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/global/reco'.
+  `./build/src/global/tracking' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/global/tracking'.
+  `./build/src/services/algorithms_init' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/algorithms_init'.
+  `./build/src/services/evaluator' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/evaluator'.
+  `./build/src/services/geometry/acts' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/geometry/acts'.
+  `./build/src/services/geometry/dd4hep' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/geometry/dd4hep'.
+  `./build/src/services/geometry/richgeo' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/geometry/richgeo'.
+  `./build/src/services/io/podio' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/io/podio'.
+  `./build/src/services/log' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/log'.
+--Type <RET> for more, q to quit, c to continue without paging--c
+  `./build/src/services/particle' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/particle'.
+  `./build/src/services/pid_lut' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/pid_lut'.
+  `./build/src/services/rootfile' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/services/rootfile'.
+  `./build/src/tests/algorithms_test' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/tests/algorithms_test'.
+  `./build/src/tests/geometry_navigation_test' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/tests/geometry_navigation_test'.
+  `./build/src/tests/track_propagation_test' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/tests/track_propagation_test'.
+  `./build/src/tests/tracking_test' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/tests/tracking_test'.
+  `./build/src/utilities/dump_flags' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/utilities/dump_flags'.
+  `./build/src/utilities/eicrecon' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/utilities/eicrecon'.
+  `./build/src/utilities/janatop' -> `/root/.spack/debug-sources/eicrecon-1.39.2-uqzp2ych7ziv4a3imjygmmmk2q46ybkd/src/utilities/janatop'.
+  `./build/Core' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Core'.
+  `./build/Examples/Algorithms/AmbiguityResolution' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/AmbiguityResolution'.
+  `./build/Examples/Algorithms/Digitization' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Digitization'.
+  `./build/Examples/Algorithms/Fatras' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Fatras'.
+  `./build/Examples/Algorithms/Geant4' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Geant4'.
+  `./build/Examples/Algorithms/Generators' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Generators'.
+  `./build/Examples/Algorithms/MaterialMapping' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/MaterialMapping'.
+  `./build/Examples/Algorithms/Printers' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Printers'.
+  `./build/Examples/Algorithms/Propagation' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Propagation'.
+  `./build/Examples/Algorithms/TrackFinding' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/TrackFinding'.
+  `./build/Examples/Algorithms/TrackFindingML' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/TrackFindingML'.
+  `./build/Examples/Algorithms/TrackFitting' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/TrackFitting'.
+  `./build/Examples/Algorithms/TruthTracking' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/TruthTracking'.
+  `./build/Examples/Algorithms/Utilities' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Utilities'.
+  `./build/Examples/Algorithms/Vertexing' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Algorithms/Vertexing'.
+  `./build/Examples/Detectors/Common' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Detectors/Common'.
+  `./build/Examples/Detectors/DD4hepDetector' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Detectors/DD4hepDetector'.
+  `./build/Examples/Detectors/Geant4Detector' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Detectors/Geant4Detector'.
+  `./build/Examples/Detectors/GenericDetector' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Detectors/GenericDetector'.
+  `./build/Examples/Detectors/MagneticField' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Detectors/MagneticField'.
+  `./build/Examples/Detectors/TGeoDetector' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Detectors/TGeoDetector'.
+  `./build/Examples/Detectors/TelescopeDetector' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Detectors/TelescopeDetector'.
+  `./build/Examples/Framework' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Framework'.
+  `./build/Examples/HelloWorld' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/HelloWorld'.
+  `./build/Examples/Io/Csv' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/Csv'.
+  `./build/Examples/Io/EDM4hep' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/EDM4hep'.
+  `./build/Examples/Io/HepMC3' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/HepMC3'.
+  `./build/Examples/Io/Json' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/Json'.
+  `./build/Examples/Io/Obj' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/Obj'.
+  `./build/Examples/Io/Podio' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/Podio'.
+  `./build/Examples/Io/Root' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/Root'.
+  `./build/Examples/Io/Svg' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Examples/Io/Svg'.
+  `./build/Fatras' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Fatras'.
+  `./build/Plugins/ActSVG' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/ActSVG'.
+  `./build/Plugins/DD4hep' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/DD4hep'.
+  `./build/Plugins/EDM4hep' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/EDM4hep'.
+  `./build/Plugins/FpeMonitoring' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/FpeMonitoring'.
+  `./build/Plugins/Geant4' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/Geant4'.
+  `./build/Plugins/Json' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/Json'.
+  `./build/Plugins/Onnx' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/Onnx'.
+  `./build/Plugins/Root' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Plugins/Root'.
+  `./build/Python/Core' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Python/Core'.
+  `./build/Python/Examples' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Python/Examples'.
+  `./build/Python/Plugins' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/Python/Plugins'.
+  `.' -> `/root/.spack/debug-sources/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7'.
+```
+
+Inspect the backtrace with full local-variable information:
+
+```bash
+(gdb) bt full
+#0  Acts::detail_vmt::VectorMultiTrajectoryBase::component_impl<true, Acts::VectorMultiTrajectory const> (instance=..., key=4099663144, istate=37)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/VectorMultiTrajectory.hpp:275
+        it = <optimized out>
+        col = <optimized out>
+#1  0x00007fe31420d731 in Acts::VectorMultiTrajectory::component_impl (this=<optimized out>, key=4099663144, istate=<optimized out>)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/VectorMultiTrajectory.hpp:492
+No locals.
+#2  Acts::MultiTrajectory<Acts::VectorMultiTrajectory>::component<unsigned int, 4099663144u> (this=<optimized out>, istate=<optimized out>)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/MultiTrajectory.hpp:696
+No locals.
+#3  Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6ul, false>::component<unsigned int, 4099663144u> (this=0x7fe2c71bc230)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/TrackStateProxy.hpp:674
+No locals.
+#4  Acts::TrackStateProxyCommon<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6ul, false>, false>::previous (this=0x7fe2c71bc230)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/TrackStateProxyCommon.hpp:71
+No locals.
+#5  Acts::TrackStateCreator<Acts::SourceLinkAdapterIterator<boost::container::vec_iterator<ActsExamples::IndexSourceLink*, true> >, Acts::TrackContainer<Acts::VectorTrackContainer, Acts::VectorMultiTrajectory, std::shared_ptr> >::processSelectedTrackStates (this=<optimized out>, begin=..., end=..., trackStates=..., isOutlier=false, logger=...)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/TrackFinding/TrackStateCreator.hpp:265
+        candidateTrackState = @0x7fe2c71bc230: {<Acts::TrackStateProxyCommon<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, false>> = {<No data fields>}, static ReadOnly = false, 
+          m_traj = {m_ptr = 0x0}, m_istate = 37}
+        mask = 27
+        trackState = {<Acts::TrackStateProxyCommon<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, false>> = {<No data fields>}, static ReadOnly = false, m_traj = {m_ptr = 0x0}, 
+          m_istate = 0}
+        typeFlags = <optimized out>
+        it = {_M_current = 0x7fe2c71bc230}
+        resultTrackStateList = <optimized out>
+        trackStateList = @0x7fe3034de2e0: {<boost::container::small_vector_base<unsigned int, void, void>> = {<boost::container::vector<unsigned int, boost::container::small_vector_allocator<unsigned int, boost::container::new_allocator<void>, void>, void>> = {
+              m_holder = {<boost::container::small_vector_allocator<unsigned int, boost::container::new_allocator<void>, void>> = {<boost::container::new_allocator<unsigned int>> = {<No data fields>}, <No data fields>}, m_start = 0x7fe3034de2f8, m_size = 0, m_capacity = 10}}, <No data fields>}, <boost::container::small_vector_storage<unsigned int, 10, 4>> = {m_storage = {aligner = {
+                data = "\001\000\000\000\001", '\000' <repeats 11 times>, "\020\026ށ\nV\000\000\001\000\000\000\000\000\000\000\020\026ށ\nV\000"}, 
+              data = "\001\000\000\000\001", '\000' <repeats 11 times>, "\020\026ށ\nV\000\000\001\000\000\000\000\000\000\000\020\026ށ\nV\000"}}, <No data fields>}
+        firstTrackState = {<std::_Optional_base<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, true, true>> = {<std::_Optional_base_impl<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, std::_Optional_base<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, true, true> >> = {<No data fields>}, 
+            _M_payload = {<std::_Optional_payload_base<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false> >> = {_M_payload = {_M_empty = {<No data fields>}, 
+                  _M_value = {<Acts::TrackStateProxyCommon<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, false>> = {<No data fields>}, static ReadOnly = false, m_traj = {
+                      m_ptr = <optimized out>}, m_istate = 0}}, 
+                _M_engaged = false}, <No data fields>}}, <std::_Enable_copy_move<true, true, true, true, std::optional<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false> > >> = {<No data fields>}, <No data fields>}
+        resultTrackStateList = <optimized out>
+        trackStateList = <optimized out>
+        firstTrackState = <optimized out>
+        it = <optimized out>
+        candidateTrackState = <optimized out>
+        mask = <optimized out>
+        trackState = <optimized out>
+        typeFlags = <optimized out>
+        os = <optimized out>
+...
+#38 0x00007fe305e52c0c in JOmniFactory<eicrecon::ActsToTracks_factory, eicrecon::NoConfig>::Process (this=0x560a774c8a70, event=...) at ./src/extensions/jana/JOmniFactory.h:543
+        input = <optimized out>
+        __for_range = @0x560a774c8cf0: {<std::_Vector_base<JOmniFactory<eicrecon::ActsToTracks_factory, eicrecon::NoConfig>::InputBase*, std::allocator<JOmniFactory<eicrecon::ActsToTracks_factory, eicrecon::NoConfig>::InputBase*> >> = {
+            _M_impl = {<std::allocator<JOmniFactory<eicrecon::ActsToTracks_factory, eicrecon::NoConfig>::InputBase*>> = {<std::__new_allocator<JOmniFactory<eicrecon::ActsToTracks_factory, eicrecon::NoConfig>::InputBase*>> = {<No data fields>}, <No data fields>}, <std::_Vector_base<JOmniFactory<eicrecon::ActsToTracks_factory, eicrecon::NoConfig>::InputBase*, std::allocator<JOmniFactory<eicrecon::ActsToTracks_factory, eicrecon::NoConfig>::InputBase*> >::_Vector_impl_data> = {_M_start = 0x560a775b6970, _M_finish = 0x560a775b6998, 
+                _M_end_of_storage = 0x560a775b69b0}, <No data fields>}}, <No data fields>}
+        __for_begin = <optimized out>
+        __for_end = <optimized out>
+#39 0x00007fe33481afc5 in JFactory::Create(JEvent const&) () from /opt/software/linux-x86_64_v2/jana2-2026.02.00-l3ovvme7abuvu4qi4jcrlpkmyod4l52n/lib/libJANA.so
+No symbol table info available.
+#40 0x00007fe307cc4c7f in JEvent::GetCollectionBase (this=0x560a8fa56d90, unique_name=..., throw_on_missing=<optimized out>)
+    at /opt/software/linux-x86_64_v2/jana2-2026.02.00-l3ovvme7abuvu4qi4jcrlpkmyod4l52n/include/JANA/JEvent.h:520
+        cg_entry = {m_call_graph = @0x560a8fa56ef0, m_factory = 0x560a774c8a70}
+        fac = 0x560a774c8a70
+        bundle = <optimized out>
+        typed_bundle = 0x560a8f855e70
+#41 0x00007fe303d6674f in JEventProcessorPODIO::Process (this=0x560a43279bf0, event=...) at ./src/services/io/podio/JEventProcessorPODIO.cc:786
+        coll_ptr = <optimized out>
+        coll = <optimized out>
+        __for_range = @0x560a43279ed0: {<std::_Vector_base<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >> = {
+            _M_impl = {<std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >> = {<std::__new_allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >> = {<No data fields>}, <No data fields>}, <std::_Vector_base<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_Vector_impl_data> = {_M_start = 0x7fe2ea412100, _M_finish = 0x7fe2ea415160, 
+                _M_end_of_storage = 0x7fe2ea416100}, <No data fields>}}, <No data fields>}
+        __for_begin = <optimized out>
+        __for_end = <optimized out>
+        successful_collections = {<std::_Vector_base<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >> = {
+            _M_impl = {<std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >> = {<std::__new_allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >> = {<No data fields>}, <No data fields>}, <std::_Vector_base<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_Vector_impl_data> = {_M_start = 0x7fe2b95de630, _M_finish = 0x7fe2b95de810, 
+                _M_end_of_storage = 0x7fe2b95de830}, <No data fields>}}, <No data fields>}
+        failed_collections = {_M_t = {
+            _M_impl = {<std::allocator<std::_Rb_tree_node<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >> = {<std::__new_allocator<std::_Rb_tree_node<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >> = {<No data fields>}, <No data fields>}, <std::_Rb_tree_key_compare<std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >> = {
+                _M_key_compare = {<std::binary_function<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool>> = {<No data fields>}, <No data fields>}}, <std::_Rb_tree_header> = {_M_header = {_M_color = std::_S_red, _M_parent = 0x0, _M_left = 0x7fe3034e6e18, _M_right = 0x7fe3034e6e18}, 
+                _M_node_count = 0}, <No data fields>}}}
+        frame = <optimized out>
+#42 0x00007fe334859835 in void jana::components::JComponent::CallWithJExceptionWrapper<JEventProcessor::DoLegacyProcess(std::shared_ptr<JEvent const> const&)::{lambda()#3}>(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, JEventProcessor::DoLegacyProcess(std::shared_ptr<JEvent const> const&)::{lambda()#3}) ()
+   from /opt/software/linux-x86_64_v2/jana2-2026.02.00-l3ovvme7abuvu4qi4jcrlpkmyod4l52n/lib/libJANA.so
+No symbol table info available.
+#43 0x00007fe334859cdd in JEventProcessor::DoLegacyProcess(std::shared_ptr<JEvent const> const&) () from /opt/software/linux-x86_64_v2/jana2-2026.02.00-l3ovvme7abuvu4qi4jcrlpkmyod4l52n/lib/libJANA.so
+No symbol table info available.
+#44 0x00007fe33483d723 in JEventMapArrow::fire(JEvent*, std::array<std::pair<JEvent*, int>, 2ul>&, unsigned long&, JArrow::FireResult&) ()
+   from /opt/software/linux-x86_64_v2/jana2-2026.02.00-l3ovvme7abuvu4qi4jcrlpkmyod4l52n/lib/libJANA.so
+No symbol table info available.
+#45 0x00007fe33482fe2e in JExecutionEngine::RunWorker(JExecutionEngine::Worker) () from /opt/software/linux-x86_64_v2/jana2-2026.02.00-l3ovvme7abuvu4qi4jcrlpkmyod4l52n/lib/libJANA.so
+No symbol table info available.
+#46 0x00007fe33416c224 in ?? () from /opt/software/linux-x86_64_v2/gcc-runtime-14.2.0-m56uiqkaqqpoi4ncm3vrjwlehuh7cslo/lib/libstdc++.so.6
+No symbol table info available.
+#47 0x00007fe333ef3b7b in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+No symbol table info available.
+#48 0x00007fe333f71630 in clone () from /lib/x86_64-linux-gnu/libc.so.6
+No symbol table info available.
+```
+
+```bash
+(gdb) frame 0
+#0  Acts::detail_vmt::VectorMultiTrajectoryBase::component_impl<true, Acts::VectorMultiTrajectory const> (instance=..., key=4099663144, istate=37)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/VectorMultiTrajectory.hpp:275
+275	        return &instance.m_previous[istate];
+(gdb) frame 4
+#4  Acts::TrackStateProxyCommon<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6ul, false>, false>::previous (this=0x7fe2c71bc230)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/EventData/TrackStateProxyCommon.hpp:71
+71	        .template component<TrackIndexType, detail_tsp::kPreviousKey>();
+(gdb) frame 5
+#5  Acts::TrackStateCreator<Acts::SourceLinkAdapterIterator<boost::container::vec_iterator<ActsExamples::IndexSourceLink*, true> >, Acts::TrackContainer<Acts::VectorTrackContainer, Acts::VectorMultiTrajectory, std::shared_ptr> >::processSelectedTrackStates (this=<optimized out>, begin=..., end=..., trackStates=..., isOutlier=false, logger=...)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/TrackFinding/TrackStateCreator.hpp:265
+265	          trackStates.makeTrackState(mask, candidateTrackState.previous());
+(gdb) list 260,285
+260	        mask &= ~PM::Filtered;
+261	      }
+262	
+263	      // copy this trackstate into fitted states MultiTrajectory
+264	      auto trackState =
+265	          trackStates.makeTrackState(mask, candidateTrackState.previous());
+266	      ACTS_VERBOSE("Create SourceLink output track state #"
+267	                   << trackState.index() << " with mask: " << mask);
+268	
+269	      if (it != begin) {
+270	        // assign indices pointing to first track state
+271	        trackState.shareFrom(*firstTrackState, PM::Predicted);
+272	        trackState.shareFrom(*firstTrackState, PM::Jacobian);
+273	      } else {
+274	        firstTrackState = trackState;
+275	      }
+276	
+277	      // either copy ALL or everything except for predicted and jacobian
+278	      trackState.copyFrom(candidateTrackState, mask, false);
+279	
+280	      auto typeFlags = trackState.typeFlags();
+281	      typeFlags.setHasParameters();
+282	      typeFlags.setHasMeasurement();
+283	      if (trackState.referenceSurface().surfaceMaterial() != nullptr) {
+284	        typeFlags.setHasMaterial();
+285	      }
+```
+
+Crash is in `component_impl` called from `.previous()`, at `TrackStateCreator.hpp:265`. Now see:
+
+```bash
+$1 = 37
+(gdb) print trackState.m_istate
+$2 = 0
+(gdb) print candidateTrackState.m_traj.m_ptr == trackState.m_traj.m_ptr
+$3 = true
+(gdb) print *(Acts::VectorMultiTrajectory*)candidateTrackState.m_traj.m_ptr
+annot access memory at address 0x0
+(gdb) print &trackStates
+$4 = (Acts::TrackStateCreator<Acts::SourceLinkAdapterIterator<boost::container::vec_iterator<ActsExamples::IndexSourceLink*, true> >, Acts::TrackContainer<Acts::VectorTrackContainer, Acts::VectorMultiTrajectory, std::shared_ptr> >::TrackStateContainerBackend *) 0x7fe2d73e0ac0
+(gdb) print candidateTrackState.m_traj.m_ptr
+$5 = (Acts::MultiTrajectory<Acts::VectorMultiTrajectory> *) 0x0
+(gdb) x/4gx 0x7f5c8088ed40
+0x7f5c8088ed40: annot access memory at address 0x7f5c8088ed40
+```
+
+`candidateTrackState.m_traj.m_ptr` is ` nullptr`, a null trajectory pointer, and `candidateTrackState.previous()` dereferences it, crashing in `component_impl` trying to read `instance.m_previous[istate]` off a null instance.
