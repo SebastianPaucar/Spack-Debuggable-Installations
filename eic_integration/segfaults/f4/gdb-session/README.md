@@ -772,6 +772,8 @@ No symbol table info available.
 No symbol table info available.
 ```
 
+Inspect specific stack `frame`s:
+
 ```bash
 (gdb) frame 0
 #0  Acts::detail_vmt::VectorMultiTrajectoryBase::component_impl<true, Acts::VectorMultiTrajectory const> (instance=..., key=4099663144, istate=37)
@@ -814,7 +816,7 @@ No symbol table info available.
 285	      }
 ```
 
-Crash is in `component_impl` called from `.previous()`, at `TrackStateCreator.hpp:265`. Now see:
+Crash is in `component_impl` called from `.previous()`, at `TrackStateCreator.hpp:265`. The call site corresponds to `TrackStateCreator::processSelectedTrackStates` (`TrackStateCreator.hpp:265` / `:278`), crashing on a `TrackStateProxy` called `candidateTrackState` whose `m_traj` pointer is invalid. Now verify:
 
 ```bash
 $1 = 37
@@ -832,4 +834,38 @@ $5 = (Acts::MultiTrajectory<Acts::VectorMultiTrajectory> *) 0x0
 0x7f5c8088ed40: annot access memory at address 0x7f5c8088ed40
 ```
 
-`candidateTrackState.m_traj.m_ptr` is ` nullptr`, a null trajectory pointer, and `candidateTrackState.previous()` dereferences it, crashing in `component_impl` trying to read `instance.m_previous[istate]` off a null instance.
+`candidateTrackState.m_traj.m_ptr` is ` nullptr`, a null trajectory pointer, and `candidateTrackState.previous()` dereferences it, crashing in `component_impl` trying to read `instance.m_previous[istate]` off a null instance. Also, `print &trackStates` and `print candidateTrackState.m_traj.m_ptr` show different addresses, ruling out `makeTrackState` reallocating the container `candidateTrackState` points into. Locate `candidateTrackState`'s origin:
+
+```bash
+(gdb) frame 5
+#5  Acts::TrackStateCreator<Acts::SourceLinkAdapterIterator<boost::container::vec_iterator<ActsExamples::IndexSourceLink*, true> >, Acts::TrackContainer<Acts::VectorTrackContainer, Acts::VectorMultiTrajectory, std::shared_ptr> >::processSelectedTrackStates (this=<optimized out>, begin=..., end=..., trackStates=..., isOutlier=false, logger=...)
+    at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/TrackFinding/TrackStateCreator.hpp:265
+265	          trackStates.makeTrackState(mask, candidateTrackState.previous());
+(gdb) print it
+$9 = {_M_current = 0x7fe2c71bc230}
+(gdb) print begin
+$10 = {_M_current = 0x7fe2c71bc230}
+(gdb) print end
+$11 = <optimized out>
+(gdb) frame 6
+#6  Acts::TrackStateCreator<Acts::SourceLinkAdapterIterator<boost::container::vec_iterator<ActsExamples::IndexSourceLink*, true> >, Acts::TrackContainer<Acts::VectorTrackContainer, Acts::VectorMultiTrajectory, std::shared_ptr> >::createSourceLinkTrackStates (this=<optimized out>, gctx=..., calibrationContext=..., boundState=..., slBegin=..., slEnd=..., prevTip=54, trackStateCandidates=..., 
+    trajectory=..., logger=..., surface=...) at /root/spack/linux-x86_64_v2/acts-45.3.0-l5w2n3bqp6iwwuizcjggcsvvk6qjhyy7/include/Acts/TrackFinding/TrackStateCreator.hpp:217
+217	      resultTrackStateList = processSelectedTrackStates(
+(gdb) print trackStateCandidates
+$19 = (std::vector<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, std::allocator<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false> > > &) @0x7fe3034e0890: {<std::_Vector_base<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, std::allocator<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false> > >> = {
+    _M_impl = {<std::allocator<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false> >> = {<std::__new_allocator<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false> >> = {<No data fields>}, <No data fields>}, <std::_Vector_base<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, std::allocator<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false> > >::_Vector_impl_data> = {_M_start = 0x7fe2c71bc240, _M_finish = 0x7fe2c71bc250, _M_end_of_storage = 0x7fe2c71bc250}, <No data fields>}}, <No data fields>}
+```
+
+It is `*begin`, from a selected sub-range of `trackStateCandidates`. `it == begin == candidateTrackState`'s confirms this is the first element of the selected range. Check:
+
+```bash
+(gdb) print sizeof(Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>)
+$22 = 16
+(gdb) print *(Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>*)0x7fe2c71bc240
+$23 = {<Acts::TrackStateProxyCommon<Acts::TrackStateProxy<Acts::VectorMultiTrajectory, 6, false>, false>> = {<No data fields>}, static ReadOnly = false, m_traj = {m_ptr = 0x7fe2d73e0ac0}, 
+  m_istate = 55}
+(gdb) print (trackStateCandidates._M_impl._M_finish - trackStateCandidates._M_impl._M_start)
+$24 = 1 
+```
+
+`*begin` does not match `trackStateCandidates`'s actual element 0. `trackStateCandidates[0]` is valid (`m_traj` is the real trajectory object, `m_istate=55`), while `*begin`/`candidateTrackState` (`m_istate=37`, `m_traj=null`) is a different object sitting 16 bytes before the vector's current buffer start. `begin` does not point into `trackStateCandidates`'s current live storage.
